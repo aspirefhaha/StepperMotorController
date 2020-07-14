@@ -1315,8 +1315,8 @@ void L6474::L6474_StepClockHandler(void)
       uint32_t deceleration = ((uint32_t)device_prm.deceleration << 16);
       if (((device_prm.commandExecuted == SOFT_STOP_CMD)&&(speed <=  device_prm.minSpeed))||
           ((device_prm.commandExecuted != RUN_CMD)&&
-           (relativePos > device_prm.stepsToTake)))
-            //(relativePos >= device_prm.stepsToTake)))
+           //(relativePos > device_prm.stepsToTake)))
+            (relativePos >= device_prm.stepsToTake)))
       {
         /* Motion process complete */
         L6474_HardStop();

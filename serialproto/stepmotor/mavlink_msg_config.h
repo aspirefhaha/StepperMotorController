@@ -14,15 +14,16 @@ typedef struct __mavlink_config_t {
  uint8_t stepmode; /*<  */
  uint8_t ocdth; /*<  */
  uint8_t tval; /*<  */
+ uint8_t isRboot; /*<  是否刚重启*/
 } mavlink_config_t;
 
-#define MAVLINK_MSG_ID_CONFIG_LEN 25
-#define MAVLINK_MSG_ID_CONFIG_MIN_LEN 25
-#define MAVLINK_MSG_ID_1_LEN 25
-#define MAVLINK_MSG_ID_1_MIN_LEN 25
+#define MAVLINK_MSG_ID_CONFIG_LEN 26
+#define MAVLINK_MSG_ID_CONFIG_MIN_LEN 26
+#define MAVLINK_MSG_ID_1_LEN 26
+#define MAVLINK_MSG_ID_1_MIN_LEN 26
 
-#define MAVLINK_MSG_ID_CONFIG_CRC 118
-#define MAVLINK_MSG_ID_1_CRC 118
+#define MAVLINK_MSG_ID_CONFIG_CRC 117
+#define MAVLINK_MSG_ID_1_CRC 117
 
 
 
@@ -30,7 +31,7 @@ typedef struct __mavlink_config_t {
 #define MAVLINK_MESSAGE_INFO_CONFIG { \
     1, \
     "CONFIG", \
-    9, \
+    10, \
     {  { "acc", NULL, MAVLINK_TYPE_UINT32_T, 0, 0, offsetof(mavlink_config_t, acc) }, \
          { "dec", NULL, MAVLINK_TYPE_UINT32_T, 0, 4, offsetof(mavlink_config_t, dec) }, \
          { "maxspeed", NULL, MAVLINK_TYPE_UINT32_T, 0, 8, offsetof(mavlink_config_t, maxspeed) }, \
@@ -40,12 +41,13 @@ typedef struct __mavlink_config_t {
          { "tval", NULL, MAVLINK_TYPE_UINT8_T, 0, 24, offsetof(mavlink_config_t, tval) }, \
          { "config", NULL, MAVLINK_TYPE_UINT16_T, 0, 20, offsetof(mavlink_config_t, config) }, \
          { "mark", NULL, MAVLINK_TYPE_UINT32_T, 0, 16, offsetof(mavlink_config_t, mark) }, \
+         { "isRboot", NULL, MAVLINK_TYPE_UINT8_T, 0, 25, offsetof(mavlink_config_t, isRboot) }, \
          } \
 }
 #else
 #define MAVLINK_MESSAGE_INFO_CONFIG { \
     "CONFIG", \
-    9, \
+    10, \
     {  { "acc", NULL, MAVLINK_TYPE_UINT32_T, 0, 0, offsetof(mavlink_config_t, acc) }, \
          { "dec", NULL, MAVLINK_TYPE_UINT32_T, 0, 4, offsetof(mavlink_config_t, dec) }, \
          { "maxspeed", NULL, MAVLINK_TYPE_UINT32_T, 0, 8, offsetof(mavlink_config_t, maxspeed) }, \
@@ -55,6 +57,7 @@ typedef struct __mavlink_config_t {
          { "tval", NULL, MAVLINK_TYPE_UINT8_T, 0, 24, offsetof(mavlink_config_t, tval) }, \
          { "config", NULL, MAVLINK_TYPE_UINT16_T, 0, 20, offsetof(mavlink_config_t, config) }, \
          { "mark", NULL, MAVLINK_TYPE_UINT32_T, 0, 16, offsetof(mavlink_config_t, mark) }, \
+         { "isRboot", NULL, MAVLINK_TYPE_UINT8_T, 0, 25, offsetof(mavlink_config_t, isRboot) }, \
          } \
 }
 #endif
@@ -74,10 +77,11 @@ typedef struct __mavlink_config_t {
  * @param tval  
  * @param config  
  * @param mark  Mark Position
+ * @param isRboot  是否刚重启
  * @return length of the message in bytes (excluding serial stream start sign)
  */
 static inline uint16_t mavlink_msg_config_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
-                               uint32_t acc, uint32_t dec, uint32_t maxspeed, uint32_t minspeed, uint8_t stepmode, uint8_t ocdth, uint8_t tval, uint16_t config, uint32_t mark)
+                               uint32_t acc, uint32_t dec, uint32_t maxspeed, uint32_t minspeed, uint8_t stepmode, uint8_t ocdth, uint8_t tval, uint16_t config, uint32_t mark, uint8_t isRboot)
 {
 #if MAVLINK_NEED_BYTE_SWAP || !MAVLINK_ALIGNED_FIELDS
     char buf[MAVLINK_MSG_ID_CONFIG_LEN];
@@ -90,6 +94,7 @@ static inline uint16_t mavlink_msg_config_pack(uint8_t system_id, uint8_t compon
     _mav_put_uint8_t(buf, 22, stepmode);
     _mav_put_uint8_t(buf, 23, ocdth);
     _mav_put_uint8_t(buf, 24, tval);
+    _mav_put_uint8_t(buf, 25, isRboot);
 
         memcpy(_MAV_PAYLOAD_NON_CONST(msg), buf, MAVLINK_MSG_ID_CONFIG_LEN);
 #else
@@ -103,6 +108,7 @@ static inline uint16_t mavlink_msg_config_pack(uint8_t system_id, uint8_t compon
     packet.stepmode = stepmode;
     packet.ocdth = ocdth;
     packet.tval = tval;
+    packet.isRboot = isRboot;
 
         memcpy(_MAV_PAYLOAD_NON_CONST(msg), &packet, MAVLINK_MSG_ID_CONFIG_LEN);
 #endif
@@ -126,11 +132,12 @@ static inline uint16_t mavlink_msg_config_pack(uint8_t system_id, uint8_t compon
  * @param tval  
  * @param config  
  * @param mark  Mark Position
+ * @param isRboot  是否刚重启
  * @return length of the message in bytes (excluding serial stream start sign)
  */
 static inline uint16_t mavlink_msg_config_pack_chan(uint8_t system_id, uint8_t component_id, uint8_t chan,
                                mavlink_message_t* msg,
-                                   uint32_t acc,uint32_t dec,uint32_t maxspeed,uint32_t minspeed,uint8_t stepmode,uint8_t ocdth,uint8_t tval,uint16_t config,uint32_t mark)
+                                   uint32_t acc,uint32_t dec,uint32_t maxspeed,uint32_t minspeed,uint8_t stepmode,uint8_t ocdth,uint8_t tval,uint16_t config,uint32_t mark,uint8_t isRboot)
 {
 #if MAVLINK_NEED_BYTE_SWAP || !MAVLINK_ALIGNED_FIELDS
     char buf[MAVLINK_MSG_ID_CONFIG_LEN];
@@ -143,6 +150,7 @@ static inline uint16_t mavlink_msg_config_pack_chan(uint8_t system_id, uint8_t c
     _mav_put_uint8_t(buf, 22, stepmode);
     _mav_put_uint8_t(buf, 23, ocdth);
     _mav_put_uint8_t(buf, 24, tval);
+    _mav_put_uint8_t(buf, 25, isRboot);
 
         memcpy(_MAV_PAYLOAD_NON_CONST(msg), buf, MAVLINK_MSG_ID_CONFIG_LEN);
 #else
@@ -156,6 +164,7 @@ static inline uint16_t mavlink_msg_config_pack_chan(uint8_t system_id, uint8_t c
     packet.stepmode = stepmode;
     packet.ocdth = ocdth;
     packet.tval = tval;
+    packet.isRboot = isRboot;
 
         memcpy(_MAV_PAYLOAD_NON_CONST(msg), &packet, MAVLINK_MSG_ID_CONFIG_LEN);
 #endif
@@ -174,7 +183,7 @@ static inline uint16_t mavlink_msg_config_pack_chan(uint8_t system_id, uint8_t c
  */
 static inline uint16_t mavlink_msg_config_encode(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg, const mavlink_config_t* config)
 {
-    return mavlink_msg_config_pack(system_id, component_id, msg, config->acc, config->dec, config->maxspeed, config->minspeed, config->stepmode, config->ocdth, config->tval, config->config, config->mark);
+    return mavlink_msg_config_pack(system_id, component_id, msg, config->acc, config->dec, config->maxspeed, config->minspeed, config->stepmode, config->ocdth, config->tval, config->config, config->mark, config->isRboot);
 }
 
 /**
@@ -188,7 +197,7 @@ static inline uint16_t mavlink_msg_config_encode(uint8_t system_id, uint8_t comp
  */
 static inline uint16_t mavlink_msg_config_encode_chan(uint8_t system_id, uint8_t component_id, uint8_t chan, mavlink_message_t* msg, const mavlink_config_t* config)
 {
-    return mavlink_msg_config_pack_chan(system_id, component_id, chan, msg, config->acc, config->dec, config->maxspeed, config->minspeed, config->stepmode, config->ocdth, config->tval, config->config, config->mark);
+    return mavlink_msg_config_pack_chan(system_id, component_id, chan, msg, config->acc, config->dec, config->maxspeed, config->minspeed, config->stepmode, config->ocdth, config->tval, config->config, config->mark, config->isRboot);
 }
 
 /**
@@ -204,10 +213,11 @@ static inline uint16_t mavlink_msg_config_encode_chan(uint8_t system_id, uint8_t
  * @param tval  
  * @param config  
  * @param mark  Mark Position
+ * @param isRboot  是否刚重启
  */
 #ifdef MAVLINK_USE_CONVENIENCE_FUNCTIONS
 
-static inline void mavlink_msg_config_send(mavlink_channel_t chan, uint32_t acc, uint32_t dec, uint32_t maxspeed, uint32_t minspeed, uint8_t stepmode, uint8_t ocdth, uint8_t tval, uint16_t config, uint32_t mark)
+static inline void mavlink_msg_config_send(mavlink_channel_t chan, uint32_t acc, uint32_t dec, uint32_t maxspeed, uint32_t minspeed, uint8_t stepmode, uint8_t ocdth, uint8_t tval, uint16_t config, uint32_t mark, uint8_t isRboot)
 {
 #if MAVLINK_NEED_BYTE_SWAP || !MAVLINK_ALIGNED_FIELDS
     char buf[MAVLINK_MSG_ID_CONFIG_LEN];
@@ -220,6 +230,7 @@ static inline void mavlink_msg_config_send(mavlink_channel_t chan, uint32_t acc,
     _mav_put_uint8_t(buf, 22, stepmode);
     _mav_put_uint8_t(buf, 23, ocdth);
     _mav_put_uint8_t(buf, 24, tval);
+    _mav_put_uint8_t(buf, 25, isRboot);
 
     _mav_finalize_message_chan_send(chan, MAVLINK_MSG_ID_CONFIG, buf, MAVLINK_MSG_ID_CONFIG_MIN_LEN, MAVLINK_MSG_ID_CONFIG_LEN, MAVLINK_MSG_ID_CONFIG_CRC);
 #else
@@ -233,6 +244,7 @@ static inline void mavlink_msg_config_send(mavlink_channel_t chan, uint32_t acc,
     packet.stepmode = stepmode;
     packet.ocdth = ocdth;
     packet.tval = tval;
+    packet.isRboot = isRboot;
 
     _mav_finalize_message_chan_send(chan, MAVLINK_MSG_ID_CONFIG, (const char *)&packet, MAVLINK_MSG_ID_CONFIG_MIN_LEN, MAVLINK_MSG_ID_CONFIG_LEN, MAVLINK_MSG_ID_CONFIG_CRC);
 #endif
@@ -246,7 +258,7 @@ static inline void mavlink_msg_config_send(mavlink_channel_t chan, uint32_t acc,
 static inline void mavlink_msg_config_send_struct(mavlink_channel_t chan, const mavlink_config_t* config)
 {
 #if MAVLINK_NEED_BYTE_SWAP || !MAVLINK_ALIGNED_FIELDS
-    mavlink_msg_config_send(chan, config->acc, config->dec, config->maxspeed, config->minspeed, config->stepmode, config->ocdth, config->tval, config->config, config->mark);
+    mavlink_msg_config_send(chan, config->acc, config->dec, config->maxspeed, config->minspeed, config->stepmode, config->ocdth, config->tval, config->config, config->mark, config->isRboot);
 #else
     _mav_finalize_message_chan_send(chan, MAVLINK_MSG_ID_CONFIG, (const char *)config, MAVLINK_MSG_ID_CONFIG_MIN_LEN, MAVLINK_MSG_ID_CONFIG_LEN, MAVLINK_MSG_ID_CONFIG_CRC);
 #endif
@@ -260,7 +272,7 @@ static inline void mavlink_msg_config_send_struct(mavlink_channel_t chan, const 
   is usually the receive buffer for the channel, and allows a reply to an
   incoming message with minimum stack space usage.
  */
-static inline void mavlink_msg_config_send_buf(mavlink_message_t *msgbuf, mavlink_channel_t chan,  uint32_t acc, uint32_t dec, uint32_t maxspeed, uint32_t minspeed, uint8_t stepmode, uint8_t ocdth, uint8_t tval, uint16_t config, uint32_t mark)
+static inline void mavlink_msg_config_send_buf(mavlink_message_t *msgbuf, mavlink_channel_t chan,  uint32_t acc, uint32_t dec, uint32_t maxspeed, uint32_t minspeed, uint8_t stepmode, uint8_t ocdth, uint8_t tval, uint16_t config, uint32_t mark, uint8_t isRboot)
 {
 #if MAVLINK_NEED_BYTE_SWAP || !MAVLINK_ALIGNED_FIELDS
     char *buf = (char *)msgbuf;
@@ -273,6 +285,7 @@ static inline void mavlink_msg_config_send_buf(mavlink_message_t *msgbuf, mavlin
     _mav_put_uint8_t(buf, 22, stepmode);
     _mav_put_uint8_t(buf, 23, ocdth);
     _mav_put_uint8_t(buf, 24, tval);
+    _mav_put_uint8_t(buf, 25, isRboot);
 
     _mav_finalize_message_chan_send(chan, MAVLINK_MSG_ID_CONFIG, buf, MAVLINK_MSG_ID_CONFIG_MIN_LEN, MAVLINK_MSG_ID_CONFIG_LEN, MAVLINK_MSG_ID_CONFIG_CRC);
 #else
@@ -286,6 +299,7 @@ static inline void mavlink_msg_config_send_buf(mavlink_message_t *msgbuf, mavlin
     packet->stepmode = stepmode;
     packet->ocdth = ocdth;
     packet->tval = tval;
+    packet->isRboot = isRboot;
 
     _mav_finalize_message_chan_send(chan, MAVLINK_MSG_ID_CONFIG, (const char *)packet, MAVLINK_MSG_ID_CONFIG_MIN_LEN, MAVLINK_MSG_ID_CONFIG_LEN, MAVLINK_MSG_ID_CONFIG_CRC);
 #endif
@@ -388,6 +402,16 @@ static inline uint32_t mavlink_msg_config_get_mark(const mavlink_message_t* msg)
 }
 
 /**
+ * @brief Get field isRboot from config message
+ *
+ * @return  是否刚重启
+ */
+static inline uint8_t mavlink_msg_config_get_isRboot(const mavlink_message_t* msg)
+{
+    return _MAV_RETURN_uint8_t(msg,  25);
+}
+
+/**
  * @brief Decode a config message into a struct
  *
  * @param msg The message to decode
@@ -405,6 +429,7 @@ static inline void mavlink_msg_config_decode(const mavlink_message_t* msg, mavli
     config->stepmode = mavlink_msg_config_get_stepmode(msg);
     config->ocdth = mavlink_msg_config_get_ocdth(msg);
     config->tval = mavlink_msg_config_get_tval(msg);
+    config->isRboot = mavlink_msg_config_get_isRboot(msg);
 #else
         uint8_t len = msg->len < MAVLINK_MSG_ID_CONFIG_LEN? msg->len : MAVLINK_MSG_ID_CONFIG_LEN;
         memset(config, 0, MAVLINK_MSG_ID_CONFIG_LEN);

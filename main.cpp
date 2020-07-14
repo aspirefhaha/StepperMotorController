@@ -98,8 +98,6 @@ void down_lock_pos_rise()
 	}
 }
 
-
-
 void sm_stop()
 {
 	motor->soft_stop();
@@ -178,7 +176,7 @@ void sm_step(StepperMotor::direction_t dir,unsigned int st)
 	motor->move(dir,st);
 	cmdqueue.call(sm_poststatus);
 }
-
+unsigned char isReboot = 1;
 void sm_postconfig()
 {
 	mavlink_message_t msg;
@@ -192,6 +190,7 @@ void sm_postconfig()
 	packet_in.mark = motor->get_mark();
 	packet_in.maxspeed = motor->get_max_speed();
 	packet_in.minspeed = motor->get_min_speed();
+	packet_in.isRboot = isReboot;
 	//packet_in.stallth = motor->get_parameter(L6474_RESERVED_REG12);
 	packet_in.tval = motor->get_parameter(L6474_TVAL);
 	packet_in.ocdth = motor->get_parameter(L6474_OCD_TH);
@@ -200,6 +199,7 @@ void sm_postconfig()
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buffer, &msg);
 	// Write buffer to serial port, locks port while writing
 	pc.write((const unsigned char *)buffer,len,NULL);
+	isReboot = 0;
 	//printf("send config len %d ok\r\n",len);
 
 }
@@ -271,7 +271,7 @@ int main()
 	motor->set_home();
 
 	motor->wait_while_active();
-	printf("step mode %x\r\n",(int)motor->get_parameter(L6474_STEP_MODE));
+	//printf("step mode %x\r\n",(int)motor->get_parameter(L6474_STEP_MODE));
 
 	//motor->run(StepperMotor::FWD);
 	//motor->move(StepperMotor::FWD,3200u);

@@ -96,7 +96,7 @@ static void mavlink_test_config(uint8_t system_id, uint8_t component_id, mavlink
         uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
         uint16_t i;
     mavlink_config_t packet_in = {
-        963497464,963497672,963497880,963498088,963498296,18275,199,10,77
+        963497464,963497672,963497880,963498088,963498296,18275,199,10,77,144
     };
     mavlink_config_t packet1, packet2;
         memset(&packet1, 0, sizeof(packet1));
@@ -109,6 +109,7 @@ static void mavlink_test_config(uint8_t system_id, uint8_t component_id, mavlink
         packet1.stepmode = packet_in.stepmode;
         packet1.ocdth = packet_in.ocdth;
         packet1.tval = packet_in.tval;
+        packet1.isRboot = packet_in.isRboot;
         
         
 #ifdef MAVLINK_STATUS_FLAG_OUT_MAVLINK1
@@ -123,12 +124,12 @@ static void mavlink_test_config(uint8_t system_id, uint8_t component_id, mavlink
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_config_pack(system_id, component_id, &msg , packet1.acc , packet1.dec , packet1.maxspeed , packet1.minspeed , packet1.stepmode , packet1.ocdth , packet1.tval , packet1.config , packet1.mark );
+    mavlink_msg_config_pack(system_id, component_id, &msg , packet1.acc , packet1.dec , packet1.maxspeed , packet1.minspeed , packet1.stepmode , packet1.ocdth , packet1.tval , packet1.config , packet1.mark , packet1.isRboot );
     mavlink_msg_config_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_config_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.acc , packet1.dec , packet1.maxspeed , packet1.minspeed , packet1.stepmode , packet1.ocdth , packet1.tval , packet1.config , packet1.mark );
+    mavlink_msg_config_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.acc , packet1.dec , packet1.maxspeed , packet1.minspeed , packet1.stepmode , packet1.ocdth , packet1.tval , packet1.config , packet1.mark , packet1.isRboot );
     mavlink_msg_config_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
@@ -141,7 +142,7 @@ static void mavlink_test_config(uint8_t system_id, uint8_t component_id, mavlink
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
         
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_config_send(MAVLINK_COMM_1 , packet1.acc , packet1.dec , packet1.maxspeed , packet1.minspeed , packet1.stepmode , packet1.ocdth , packet1.tval , packet1.config , packet1.mark );
+    mavlink_msg_config_send(MAVLINK_COMM_1 , packet1.acc , packet1.dec , packet1.maxspeed , packet1.minspeed , packet1.stepmode , packet1.ocdth , packet1.tval , packet1.config , packet1.mark , packet1.isRboot );
     mavlink_msg_config_decode(last_msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 }
