@@ -713,6 +713,8 @@ public:
     }
 
 
+    bool is_scanmode();
+
 protected:
 
     /*** Protected Component Related Methods ***/

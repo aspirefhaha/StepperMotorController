@@ -19,7 +19,7 @@ L6474_init_t init = {
 	L6474_OCD_TH_6000mA,               /* Overcurrent threshold (OCD_TH register). */
     L6474_CONFIG_OC_SD_ENABLE,        /* Overcurrent shutwdown (OC_SD field of CONFIG register). */
     L6474_CONFIG_EN_TQREG_TVAL_USED,  /* Torque regulation method (EN_TQREG field of CONFIG register). */
-	L6474_STEP_SEL_1_2,              /* Step selection (STEP_SEL field of STEP_MODE register). */
+	L6474_STEP_SEL_1_4,              /* Step selection (STEP_SEL field of STEP_MODE register). */
     L6474_SYNC_SEL_1_2,               /* Sync selection (SYNC_SEL field of STEP_MODE register). */
     L6474_FAST_STEP_12us,             /* Fall time value (T_FAST field of T_FAST register). Range: 2us to 32us. */
     L6474_TOFF_FAST_8us,              /* Maximum fast decay time (T_OFF field of T_FAST register). Range: 2us to 32us. */
@@ -43,10 +43,19 @@ Serial pc(PA_11, PA_12,256000);
 
 InterruptIn up_lock_pos(PB_7);
 InterruptIn down_lock_pos(PC_12);
+AnalogIn OpAmp(PC_3);
 
 Thread thRead;
+Thread thRunCommand;
 EventQueue  cmdqueue;
 Ticker mytimer;
+
+bool uplock = false;
+bool downlock = false;
+
+int upPos = 300;
+int downPos = 0;
+bool inScanMode = false;
 
 unsigned int mytickercount = 0;
 
@@ -88,6 +97,7 @@ void up_lock_pos_rise()
 	if(up_lock_pos.read() != 0){
 		cmdqueue.call(sm_hardstop);
 	}
+	uplock = true;
 }
 
 
@@ -96,6 +106,7 @@ void down_lock_pos_rise()
 	if(down_lock_pos.read() != 0){
 		cmdqueue.call(sm_hardstop);
 	}
+	downlock= true;
 }
 
 void sm_stop()
@@ -194,7 +205,8 @@ void sm_postconfig()
 	//packet_in.stallth = motor->get_parameter(L6474_RESERVED_REG12);
 	packet_in.tval = motor->get_parameter(L6474_TVAL);
 	packet_in.ocdth = motor->get_parameter(L6474_OCD_TH);
-
+	packet_in.uppos = upPos;
+	packet_in.downpos = downPos;
 	mavlink_msg_config_encode(1, 1, &msg, &packet_in);
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buffer, &msg);
 	// Write buffer to serial port, locks port while writing
@@ -211,8 +223,14 @@ void sm_heartbeat()
 	mavlink_heartbeat_t packet_in ;
 	packet_in.tick = mytickercount;
 	packet_in.position = motor->get_position();
+	packet_in.dynamic = OpAmp.read()*3.3;
 	packet_in.speed = motor->get_speed();
 	packet_in.runstatus = motor->get_device_state();
+	packet_in.lockstate = 0;
+	if(uplock)
+		packet_in.lockstate |= 0x1;
+	if(downlock)
+		packet_in.lockstate |= 0x2;
 	mavlink_msg_heartbeat_encode(1, 1, &msg, &packet_in);
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buffer, &msg);
 	pc.write((const unsigned char *)buffer,len,NULL);
@@ -226,10 +244,45 @@ void thread_read(void)
 	}
 }
 
+bool runprog1 = false;
+
+void thread_runcommand(void)
+{
+	while(1){
+		if(runprog1){
+			for(int i =0 ;i<800;i++){
+				cmdqueue.call(sm_step,StepperMotor::BWD,1);
+				wait_ms(200);
+			}
+			runprog1 = false;
+		}
+		if(inScanMode){
+			cmdqueue.call(sm_mvfwd);
+			while(!uplock)
+				wait_ms(500);
+			upPos = motor->get_position();
+			wait_ms(3000);
+			uplock = false;
+			cmdqueue.call(sm_mvbwd);
+			while(!downlock){
+				wait_ms(500);
+			}
+			downPos = motor->get_position();
+			cmdqueue.call(sm_postconfig);
+			wait_ms(3000);
+			downlock = false;
+			inScanMode = false;
+		}
+		wait_ms(100);
+	}
+
+}
+
 void sm_runprog1(int val)
 {
-	int value  = motor->get_parameter(L6474_INEXISTENT_REG);
-	value = value * 2;
+	//int value  = motor->get_parameter(L6474_INEXISTENT_REG);
+	//value = value * 2;
+	runprog1 = true;
 }
 
 void myL6474_flag_irq()
@@ -277,6 +330,7 @@ int main()
 	//motor->move(StepperMotor::FWD,3200u);
 	mytimer.attach_us(&attime, 1000);
 	thRead.start(thread_read);
+	thRunCommand.start(thread_runcommand);
 	cmdqueue.call(callback(sm_postconfig));
 	//serialRead.start(serial_read);
 	while(1){
@@ -294,7 +348,8 @@ int main()
 						printf("Recv Get Config Cmd\r\n");
 						break;
 					case SMCMD_MOVEFWD:
-						cmdqueue.call(callback(sm_mvfwd));
+						if(!uplock && !downlock)
+							cmdqueue.call(callback(sm_mvfwd));
 						printf("Recv Move Forward Cmd\r\n");
 						break;
 					case SMCMD_SOFTSTOP:
@@ -302,7 +357,8 @@ int main()
 						printf("Recv SoftStop Cmd\r\n");
 						break;
 					case SMCMD_MOVEBWD:
-						cmdqueue.call(callback(sm_mvbwd));
+						if(!uplock && !downlock)
+							cmdqueue.call(callback(sm_mvbwd));
 						printf("Recv Move Backward Cmd\r\n");
 						break;
 					case SMCMD_HARDSTOP:
@@ -327,7 +383,8 @@ int main()
 						unsigned int mstep = 0;
 						dir = runcmd.dir == 0? StepperMotor::BWD:StepperMotor::FWD;
 						mstep = abs(runcmd.distance);
-						cmdqueue.call(sm_step,dir,mstep);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_step,dir,mstep);
 						printf("Recv MoveStep  Cmd dir %d step %d \r\n",dir,mstep);
 						break;
 					}
@@ -338,10 +395,21 @@ int main()
 						printf("Recv SetMark Cmd %d\r\n",markpos);
 						break;
 					}
+					case SMCMD_UNLOCKUP:
+					{
+						uplock = false;
+						break;
+					}
+					case SMCMD_UNLOCKDOWN:
+					{
+						downlock = false;
+						break;
+					}
 					case SMCMD_GOPOS:
 					{
 						int pos = runcmd.distance;
-						cmdqueue.call(sm_gopos,pos);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_gopos,pos);
 						printf("Recv Go Pos Cmd %d\r\n",pos);
 						break;
 					}
@@ -354,27 +422,31 @@ int main()
 					case SMCMD_SETACC:
 					{
 						int acc = runcmd.distance;
-						cmdqueue.call(sm_setacc,acc);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_setacc,acc);
 						printf("Recv Set Acc Cmd %d\r\n",acc);
 						break;
 					}
 					case SMCMD_SETDEC:
 					{
 						int dec = runcmd.distance;
-						cmdqueue.call(sm_setdec,dec);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_setdec,dec);
 						printf("Recv Set Dec Cmd %d\r\n",dec);
 						break;
 					}
 					case SMCMD_GOMARK:
 					{
-						cmdqueue.call(sm_gomark);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_gomark);
 						printf("Recv GoMark\r\n");
 						break;
 					}
 					case SMCMD_SETMAXSPEED:
 					{
 						unsigned int maxspeed = abs(runcmd.distance);
-						cmdqueue.call(sm_setmaxspeed,maxspeed);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_setmaxspeed,maxspeed);
 						printf("Recv Set MaxSpeed Cmd %d\r\n",maxspeed);
 						break;
 					}
@@ -395,13 +467,32 @@ int main()
 					case SMCMD_SETMINSPEED:
 					{
 						unsigned int minspeed = abs(runcmd.distance);
-						cmdqueue.call(sm_setminspeed,minspeed);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_setminspeed,minspeed);
 						printf("Recv Set MinSpeed Cmd %d\r\n",minspeed);
+						break;
+					}
+					case SMCMD_SCANUPDOWNLOCK:
+					{
+						inScanMode = true;
+						break;
+					}
+					case SMCMD_SETUPLOCKPOS:
+					{
+						upPos = runcmd.distance;
+						cmdqueue.call(sm_postconfig);
+						break;
+					}
+					case SMCMD_SETDOWNLOCKPOS:
+					{
+						downPos = runcmd.distance;
+						cmdqueue.call(sm_postconfig);
 						break;
 					}
 					case SMCMD_RUNPROG1:
 					{
-						cmdqueue.call(sm_runprog1,0);
+						if(!uplock && !downlock)
+							cmdqueue.call(sm_runprog1,0);
 						printf("Recv PROG1 Cmd\r\n");
 						break;
 					}

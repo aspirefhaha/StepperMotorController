@@ -490,6 +490,11 @@ bool L6474::L6474_SoftStop(void)
   return (cmdExecuted);
 }
 
+bool L6474::is_scanmode(void)
+{
+	//return device_prm.commandExecuted == SCAN_CMD;
+}
+
 /**********************************************************
  * @brief  Locks until the device state becomes Inactive
  * @retval None
