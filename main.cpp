@@ -160,6 +160,19 @@ void sm_setmark(int markpos)
 	motor->set_mark((markpos & 0x3fffff));
 }
 
+void sm_postcust()
+{
+	mavlink_message_t msg;
+	uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+	mavlink_custstep_t packet_in ;
+
+	motor->get_cust(&packet_in.wait1,&packet_in.wait2,&packet_in.wait3,&packet_in.wait4,&packet_in.wait5,
+			&packet_in.step1,&packet_in.step2,&packet_in.step3,&packet_in.step4,&packet_in.step5);
+	mavlink_msg_custstep_encode(1, 1, &msg, &packet_in);
+	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buffer, &msg);
+	pc.write((const unsigned char *)buffer,len,NULL);
+}
+
 void sm_setmaxspeed(unsigned int maxspeed)
 {
 	motor->set_max_speed(maxspeed);
@@ -339,10 +352,20 @@ int main()
 		msgReceived = mavlink_parse_char(MAVLINK_COMM_0,tmpc,&message,&status);
 		if(msgReceived){
 			switch(message.msgid){
+			case MAVLINK_MSG_ID_CUSTSTEP:{
+				mavlink_custstep_t custstep;
+				mavlink_msg_custstep_decode(&message,&custstep);
+				motor->set_cust(custstep.wait1,custstep.wait2,custstep.wait3,custstep.wait4,custstep.wait5,
+								custstep.step1,custstep.step2,custstep.step3,custstep.step4,custstep.step5);
+				break;
+			}
 			case MAVLINK_MSG_ID_RUNCMD:{
 					mavlink_runcmd_t runcmd;
 					mavlink_msg_runcmd_decode(&message,&runcmd);
 					switch(runcmd.cmd){
+					case SMCMD_GETCUSTSTEP:
+						cmdqueue.call(sm_postcust);
+						break;
 					case SMCMD_GETCONFIG:
 						cmdqueue.call(callback(sm_postconfig));
 						printf("Recv Get Config Cmd\r\n");

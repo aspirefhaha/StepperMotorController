@@ -1232,9 +1232,40 @@ void L6474::L6474_StartMovement(void)
   L6474_ApplySpeed(device_prm.minSpeed);
 }
 
+#define CUSTEPNUM 5
+static int cusFreqs[CUSTEPNUM] = {200,400,600,800,1000};
+static int cusWaits[CUSTEPNUM] = {10,20,30,40,50};
 
-static int cusFreqs[5] = {200,400,600,800,1000};
-static int cusWaits[5] = {10,20,30,40,50};
+
+void L6474::get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5,
+		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5)
+{
+	*wait1 = cusWaits[0];
+	*wait2 = cusWaits[1];
+	*wait3 = cusWaits[2];
+	*wait4 = cusWaits[3];
+	*wait5 = cusWaits[4];
+	*freq1 = cusFreqs[0];
+	*freq2 = cusFreqs[1];
+	*freq3 = cusFreqs[2];
+	*freq4 = cusFreqs[3];
+	*freq5 = cusFreqs[4];
+}
+
+void L6474::set_cust(uint32_t wait1, uint32_t wait2, uint32_t wait3, uint32_t wait4,uint32_t wait5,
+    		uint32_t freq1, uint32_t freq2, uint32_t freq3, uint32_t freq4,uint32_t freq5)
+{
+	cusWaits[0] = wait1;
+	cusWaits[1] = wait2;
+	cusWaits[2] = wait3;
+	cusWaits[3] = wait4;
+	cusWaits[4] = wait5;
+	cusFreqs[0] = freq1;
+	cusFreqs[1] = freq2;
+	cusFreqs[2] = freq3;
+	cusFreqs[3] = freq4;
+	cusFreqs[4] = freq5;
+}
 
 /**********************************************************
  * @brief  Handles the device state machine at each ste
@@ -1251,6 +1282,42 @@ void L6474::L6474_StepClockHandler(void)
 
   switch (device_prm.motionState) 
   {
+	case CUSTOMMODE:
+	{
+		static int curwaitstep = 0;	//在本步骤等待了多少个周期
+		static int curuseidx = 0;	//运行到第几步
+		static int curhasstart = 0; //首次运行
+
+		if(curuseidx>=CUSTEPNUM){
+			curhasstart = 0;
+			curuseidx = 0;
+			curwaitstep = 0;
+			L6474_HardStop();
+			break;
+		}
+		if(curhasstart==0){	//刚启动
+			curhasstart = 1;
+			device_prm.speed = cusFreqs[curuseidx];
+			L6474_ApplySpeed(device_prm.speed);
+			break;
+		}
+		curwaitstep++;
+		if(curwaitstep>=cusWaits[curuseidx]){ //当前步骤走完了，进入下一个步骤
+			curuseidx++;
+			curwaitstep=0;
+			if(curuseidx>=CUSTEPNUM){ //最后一个步骤了
+				curhasstart = 0;
+				curuseidx = 0;
+				curwaitstep = 0;
+				L6474_HardStop();
+				break;
+			}
+			device_prm.speed = cusFreqs[curuseidx];
+			L6474_ApplySpeed(device_prm.speed);
+		}
+
+		break;
+	}
     case ACCELERATING: 
     {
         uint32_t relPos = device_prm.relativePos;
