@@ -1232,6 +1232,10 @@ void L6474::L6474_StartMovement(void)
   L6474_ApplySpeed(device_prm.minSpeed);
 }
 
+
+static int cusFreqs[5] = {200,400,600,800,1000};
+static int cusWaits[5] = {10,20,30,40,50};
+
 /**********************************************************
  * @brief  Handles the device state machine at each ste
  * @retval None
