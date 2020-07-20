@@ -714,6 +714,16 @@ public:
 
 
     bool is_scanmode();
+    void stopengine();
+    bool isInCustomMode2(){
+    	return device_prm.motionState == CUSTOMMODE2;
+    }
+    bool istouchlocked = false;
+    void touchlocked(){
+    	if(device_prm.motionState == CUSTOMMODE2)
+    		istouchlocked = true;
+    }
+    void startengine();
     void get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5,
     		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5);
 
@@ -1024,6 +1034,11 @@ protected:
     static uint8_t spi_tx_bursts[L6474_CMD_ARG_MAX_NB_BYTES][MAX_NUMBER_OF_DEVICES];
     static uint8_t spi_rx_bursts[L6474_CMD_ARG_MAX_NB_BYTES][MAX_NUMBER_OF_DEVICES];
 
+
+private:
+#define CUSTEPNUM 5
+    int cusFreqs[CUSTEPNUM] ; //= {200,400,600,800,1000};
+    int cusWaits[CUSTEPNUM] ; //= {10,20,30,40,50};
 
 public:
 

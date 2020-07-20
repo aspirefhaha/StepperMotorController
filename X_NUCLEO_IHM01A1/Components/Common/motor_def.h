@@ -116,7 +116,8 @@ typedef enum {
   DECELERATING = 1, 
   STEADY = 2,
   INACTIVE= 3,
-  CUSTOMMODE =4
+  CUSTOMMODE1 =4,
+  CUSTOMMODE2 = 5
 } motorState_t;
 /**
   * @}

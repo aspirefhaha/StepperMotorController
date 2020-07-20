@@ -15,11 +15,11 @@ L6474_init_t init = {
     400,                              /* Deceleration rate in pps^2. Range: (0..+inf). */
     400,                             /* Maximum speed in pps. Range: (30..10000]. */
     10,                              /* Minimum speed in pps. Range: [30..10000). */
-    406.25f,                              /* Torque regulation current in mA. Range: 31.25mA to 4000mA. */
+    906.25f,                              /* Torque regulation current in mA. Range: 31.25mA to 4000mA. */
 	L6474_OCD_TH_6000mA,               /* Overcurrent threshold (OCD_TH register). */
     L6474_CONFIG_OC_SD_ENABLE,        /* Overcurrent shutwdown (OC_SD field of CONFIG register). */
     L6474_CONFIG_EN_TQREG_TVAL_USED,  /* Torque regulation method (EN_TQREG field of CONFIG register). */
-	L6474_STEP_SEL_1_4,              /* Step selection (STEP_SEL field of STEP_MODE register). */
+	L6474_STEP_SEL_1_2,              /* Step selection (STEP_SEL field of STEP_MODE register). */
     L6474_SYNC_SEL_1_2,               /* Sync selection (SYNC_SEL field of STEP_MODE register). */
     L6474_FAST_STEP_12us,             /* Fall time value (T_FAST field of T_FAST register). Range: 2us to 32us. */
     L6474_TOFF_FAST_8us,              /* Maximum fast decay time (T_OFF field of T_FAST register). Range: 2us to 32us. */
@@ -97,6 +97,9 @@ void up_lock_pos_rise()
 	if(up_lock_pos.read() != 0){
 		cmdqueue.call(sm_hardstop);
 	}
+	//if(motor->isInCustomMode2()){
+	motor->touchlocked();
+	//}
 	uplock = true;
 }
 
@@ -106,6 +109,7 @@ void down_lock_pos_rise()
 	if(down_lock_pos.read() != 0){
 		cmdqueue.call(sm_hardstop);
 	}
+	motor->touchlocked();
 	downlock= true;
 }
 
@@ -263,8 +267,8 @@ void thread_runcommand(void)
 {
 	while(1){
 		if(runprog1){
-			for(int i =0 ;i<800;i++){
-				cmdqueue.call(sm_step,StepperMotor::BWD,1);
+			for(int i =0 ;i<400;i++){
+				cmdqueue.call(sm_step,StepperMotor::FWD,1);
 				wait_ms(200);
 			}
 			runprog1 = false;
@@ -289,6 +293,16 @@ void thread_runcommand(void)
 		wait_ms(100);
 	}
 
+}
+
+void sm_stopengine()
+{
+	motor->stopengine();
+}
+
+void sm_startengine()
+{
+	motor->startengine();
 }
 
 void sm_runprog1(int val)
@@ -363,6 +377,14 @@ int main()
 					mavlink_runcmd_t runcmd;
 					mavlink_msg_runcmd_decode(&message,&runcmd);
 					switch(runcmd.cmd){
+					case SMCMD_STOPENGINE:
+					{
+						cmdqueue.call(sm_stopengine);
+						break;
+					}
+					case SMCMD_STARTENGINE:
+						cmdqueue.call(sm_startengine);
+						break;
 					case SMCMD_GETCUSTSTEP:
 						cmdqueue.call(sm_postcust);
 						break;

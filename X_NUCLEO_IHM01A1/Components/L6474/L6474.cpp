@@ -52,7 +52,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "L6474.h"
-
+#define STOPFREQ 800
     
 /* Definitions ---------------------------------------------------------------*/
 
@@ -135,6 +135,22 @@ status_t L6474::L6474_Init(void *init)
   /* Get Status to clear flags after start up */
   L6474_CmdGetStatus();
   
+
+//  for(int i = 0 ;i < CUSTEPNUM;i++){
+//	  cusFreqs[i] = 200 * (i+1);
+//	  cusWaits[i] = 10 * (i+1);
+//  }
+  cusFreqs[0]=300;
+  cusFreqs[1]=500;
+  cusFreqs[2]=800;
+  cusFreqs[3]=1200;
+  cusFreqs[4]=1200;
+  cusWaits[0] = 10;
+  cusWaits[1] = 10;
+  cusWaits[2] = 10;
+  cusWaits[3] = 10;
+  cusWaits[4] = 10;
+
   return COMPONENT_OK;
 }
 
@@ -251,6 +267,27 @@ void L6474::L6474_GoMark(void)
 
     mark = L6474_ConvertPosition(L6474_CmdGetParam(L6474_MARK));
     L6474_GoTo(mark);  
+}
+
+void L6474::stopengine()
+{
+	L6474_SetDirection(FORWARD);
+	device_prm.motionState = CUSTOMMODE2;
+	L6474_CmdEnable();
+	L6474_ApplySpeed(STOPFREQ);
+}
+
+void L6474::startengine()
+{
+	//device_prm.commandExecuted = MOVE_CMD;
+
+	/* Direction setup */
+	L6474_SetDirection(FORWARD);
+
+	/* Motor activation */
+	device_prm.motionState = CUSTOMMODE1;
+	L6474_CmdEnable();
+	L6474_ApplySpeed(cusFreqs[0]);
 }
 
 /**********************************************************
@@ -1232,11 +1269,6 @@ void L6474::L6474_StartMovement(void)
   L6474_ApplySpeed(device_prm.minSpeed);
 }
 
-#define CUSTEPNUM 5
-static int cusFreqs[CUSTEPNUM] = {200,400,600,800,1000};
-static int cusWaits[CUSTEPNUM] = {10,20,30,40,50};
-
-
 void L6474::get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5,
 		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5)
 {
@@ -1282,38 +1314,77 @@ void L6474::L6474_StepClockHandler(void)
 
   switch (device_prm.motionState) 
   {
-	case CUSTOMMODE:
+	case CUSTOMMODE2:
+	{
+		static int currunstep = 0;
+		currunstep++;
+		if(currunstep>=5){
+
+			if(currunstep==10){
+				currunstep = 0;
+				L6474_ApplySpeed(STOPFREQ);
+				//pwm.period(1.0/STOPFREQ);
+			}
+			else{
+				pwm.write(0.0f);
+			}
+		}
+		else{
+
+		}
+		if(istouchlocked){
+			L6474_HardStop();
+			device_prm.motionState = INACTIVE;
+			istouchlocked= false;
+			break;
+		}
+		break;
+	}
+	case CUSTOMMODE1:
 	{
 		static int curwaitstep = 0;	//在本步骤等待了多少个周期
 		static int curuseidx = 0;	//运行到第几步
-		static int curhasstart = 0; //首次运行
+		//static int curhasstart = 0; //首次运行
 
+#if 0
 		if(curuseidx>=CUSTEPNUM){
-			curhasstart = 0;
+			//curhasstart = 0;
 			curuseidx = 0;
 			curwaitstep = 0;
 			L6474_HardStop();
+			//device_prm.motionState = STEADY;
+			//device_prm.commandExecuted = RUN_CMD;
+			//device_prm.accu = 0;
 			break;
 		}
-		if(curhasstart==0){	//刚启动
-			curhasstart = 1;
-			device_prm.speed = cusFreqs[curuseidx];
-			L6474_ApplySpeed(device_prm.speed);
-			break;
-		}
+#endif
+		//if(curhasstart==0){	//刚启动
+		//	curhasstart = 1;
+			//device_prm.speed = cusFreqs[curuseidx];
+			//L6474_ApplySpeed(device_prm.speed);
+			//break;
+		//}
 		curwaitstep++;
+		if(curwaitstep==cusWaits[curuseidx] && curuseidx < CUSTEPNUM -1 && cusFreqs[curuseidx] < cusFreqs[curuseidx+1]){
+			L6474_ApplySpeed(cusFreqs[curuseidx+1]);
+			pwm.write(0.0f);
+			break;
+		}
 		if(curwaitstep>=cusWaits[curuseidx]){ //当前步骤走完了，进入下一个步骤
+			//pwm.write(0.0f);
 			curuseidx++;
 			curwaitstep=0;
 			if(curuseidx>=CUSTEPNUM){ //最后一个步骤了
-				curhasstart = 0;
+				//curhasstart = 0;
 				curuseidx = 0;
 				curwaitstep = 0;
 				L6474_HardStop();
+				//device_prm.motionState = STEADY;
+				//device_prm.commandExecuted = RUN_CMD;
+				//device_prm.accu = 0;
 				break;
 			}
-			device_prm.speed = cusFreqs[curuseidx];
-			L6474_ApplySpeed(device_prm.speed);
+			L6474_ApplySpeed(cusFreqs[curuseidx]);
 		}
 
 		break;
