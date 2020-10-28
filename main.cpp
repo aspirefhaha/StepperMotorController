@@ -1,6 +1,7 @@
 /* mbed specific header files. */
 #include "mbed.h"
 
+
 /* Helper header files. */
 #include "DevSPI.h"
 
@@ -43,6 +44,23 @@ Serial pc(PA_11, PA_12,256000);
 
 InterruptIn up_lock_pos(PB_7);
 InterruptIn down_lock_pos(PC_12);
+
+InterruptIn emerg_stop(PB_14);
+DigitalOut emerg_led(PB_15);
+DigitalOut fwd_Led(PB_0);
+DigitalOut bwd_Led(PB_1);
+
+DigitalOut switch1_led(PC_1);
+InterruptIn switch1_btn(PC_0);
+
+DigitalOut switch2_led(PC_4);
+InterruptIn switch2_btn(PC_2);
+
+DigitalOut switch3_led(PC_6);
+InterruptIn switch3_btn(PC_5);
+
+DigitalOut uplock_led(PC_8);
+DigitalOut downlock_led(PC_9);
 AnalogIn OpAmp(PC_3);
 
 Thread thRead;
@@ -63,12 +81,16 @@ void attime() {
      ++mytickercount;
 }
 
+uint16_t dirstatus = 0;
+uint8_t runstatus = 3;
+
 void sm_poststatus()
 {
 	mavlink_message_t msg;
 	uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
 	mavlink_l6474status_t packet_in ;
 	packet_in.status = motor->get_status();
+	dirstatus = packet_in.status;
 	mavlink_msg_l6474status_encode(1, 1, &msg, &packet_in);
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buffer, &msg);
 	pc.write((const unsigned char *)buffer,len,NULL);
@@ -91,7 +113,20 @@ void sm_hardstop()
 {
 	motor->hard_stop();
 }
+void sm_led1off()
+{
+	switch1_led = 1;
+}
 
+void sm_led2off()
+{
+	switch2_led = 1;
+}
+
+void sm_led3off()
+{
+	switch3_led = 1;
+}
 void up_lock_pos_rise()
 {
 	if(up_lock_pos.read() != 0){
@@ -101,8 +136,13 @@ void up_lock_pos_rise()
 	motor->touchlocked();
 	//}
 	uplock = true;
+	uplock_led = 0;
 }
-
+void sm_stop()
+{
+	motor->soft_stop();
+	cmdqueue.call(sm_poststatus);
+}
 
 void down_lock_pos_rise()
 {
@@ -111,13 +151,51 @@ void down_lock_pos_rise()
 	}
 	motor->touchlocked();
 	downlock= true;
+	downlock_led = 0;
 }
 
-void sm_stop()
+void switch1_btn_rise()
 {
-	motor->soft_stop();
-	cmdqueue.call(sm_poststatus);
+	if(switch1_btn.read() == 1){
+		cmdqueue.call(sm_stop);
+		switch1_led = 0;
+		cmdqueue.call_in(1000,sm_led1off);
+	}
 }
+
+void switch2_btn_rise()
+{
+	if(switch2_btn.read() == 1 ){
+		if(runstatus == 3){
+			cmdqueue.call(sm_mvfwd);
+			switch2_led = 0;
+			cmdqueue.call_in(1000,sm_led2off);
+		}
+	}
+}
+
+void switch3_btn_rise()
+{
+	if(switch3_btn.read() == 1 ){
+		if(runstatus == 3){
+			cmdqueue.call(sm_mvbwd);
+			switch3_led = 0;
+			cmdqueue.call_in(1000,sm_led3off);
+		}
+	}
+}
+
+void emerg_stop_fall()
+{
+	if(emerg_stop.read() == 0){
+		emerg_led = 0;
+		cmdqueue.call(sm_hardstop);
+	}
+	//motor->touchlocked();
+
+}
+
+
 
 void sm_enable()
 {
@@ -243,6 +321,22 @@ void sm_heartbeat()
 	packet_in.dynamic = OpAmp.read()*3.3;
 	packet_in.speed = motor->get_speed();
 	packet_in.runstatus = motor->get_device_state();
+	runstatus = packet_in.runstatus;
+	if(runstatus==3){
+		fwd_Led = 1;
+		bwd_Led = 1;
+	}
+	else{
+		emerg_led = 1;
+		if((dirstatus & 0x10) == 0){
+			fwd_Led = 0;
+			bwd_Led = 1;
+		}
+		else{
+			fwd_Led = 1;
+			bwd_Led = 0;
+		}
+	}
 	packet_in.lockstate = 0;
 	if(uplock)
 		packet_in.lockstate |= 0x1;
@@ -280,6 +374,7 @@ void thread_runcommand(void)
 			upPos = motor->get_position();
 			wait_ms(3000);
 			uplock = false;
+			uplock_led = 1;
 			cmdqueue.call(sm_mvbwd);
 			while(!downlock){
 				wait_ms(500);
@@ -288,6 +383,7 @@ void thread_runcommand(void)
 			cmdqueue.call(sm_postconfig);
 			wait_ms(3000);
 			downlock = false;
+			downlock_led = 1;
 			inScanMode = false;
 		}
 		wait_ms(100);
@@ -325,6 +421,28 @@ int main()
 	mavlink_message_t message;
 	DevSPI dev_spi(D11, D12, D13);
 
+
+	fwd_Led.pin_mode(OpenDrainPullUp);
+	bwd_Led.pin_mode(OpenDrainPullUp);
+
+	uplock_led.pin_mode(OpenDrainPullUp);
+	downlock_led.pin_mode(OpenDrainPullUp);
+
+	emerg_led.pin_mode(OpenDrainPullUp);
+	switch1_led.pin_mode(OpenDrainPullUp);
+	switch2_led.pin_mode(OpenDrainPullUp);
+	switch3_led.pin_mode(OpenDrainPullUp);
+
+	fwd_Led = 1;
+	bwd_Led = 1;
+	uplock_led  = 1;
+	downlock_led = 1;
+
+	emerg_led  = 1;
+	switch1_led = 1;
+	switch2_led = 1;
+	switch3_led = 1;
+
 	/* Initializing Motor Control Component. */
 	motor = new L6474(D2, D8, D7, D9, D10, dev_spi);
 
@@ -341,6 +459,22 @@ int main()
 	down_lock_pos.mode(PushPullPullDown);
 	down_lock_pos.rise(down_lock_pos_rise);
 	down_lock_pos.enable_irq();
+
+	emerg_stop.mode(PushPullPullUp);
+	emerg_stop.fall(emerg_stop_fall);
+	emerg_stop.enable_irq();
+
+	switch1_btn.mode(PushPullPullDown);
+	switch1_btn.rise(switch1_btn_rise);
+	switch1_btn.enable_irq();
+
+	switch2_btn.mode(PushPullPullDown);
+	switch2_btn.rise(switch2_btn_rise);
+	switch2_btn.enable_irq();
+
+	switch3_btn.mode(PushPullPullDown);
+	switch3_btn.rise(switch3_btn_rise);
+	switch3_btn.enable_irq();
 
 	motor->wait_while_active();
 
@@ -443,11 +577,13 @@ int main()
 					case SMCMD_UNLOCKUP:
 					{
 						uplock = false;
+						uplock_led = 1;
 						break;
 					}
 					case SMCMD_UNLOCKDOWN:
 					{
 						downlock = false;
+						downlock_led = 1;
 						break;
 					}
 					case SMCMD_GOPOS:

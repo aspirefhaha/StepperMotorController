@@ -86,6 +86,10 @@ public:
         return gpio_read(&gpio);
     }
 
+    void pin_mode(PinMode pm){
+    	gpio_mode(&gpio,pm);
+    }
+
     /** Return the output setting, represented as 0 or 1 (int)
      *
      *  @returns
