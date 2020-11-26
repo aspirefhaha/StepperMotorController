@@ -59,6 +59,9 @@ InterruptIn switch2_btn(PC_2);
 DigitalOut switch3_led(PC_6);
 InterruptIn switch3_btn(PC_5);
 
+InterruptIn switchShiChe1(PC_10);
+InterruptIn switchShiChe2(PC_11);
+
 DigitalOut uplock_led(PC_8);
 DigitalOut downlock_led(PC_9);
 AnalogIn OpAmp(PC_3);
@@ -171,6 +174,22 @@ void switch2_btn_rise()
 			switch2_led = 0;
 			cmdqueue.call_in(1000,sm_led2off);
 		}
+	}
+}
+
+void switchShiChe1_rise()
+{
+	if(switchShiChe1.read() == 1){
+		if(!uplock && !downlock)
+			cmdqueue.call(callback(sm_mvfwd));
+	}
+}
+
+void switchShiChe2_rise()
+{
+	if(switchShiChe2.read() == 1){
+		if(!uplock && !downlock)
+			cmdqueue.call(callback(sm_mvbwd));
 	}
 }
 
@@ -352,6 +371,7 @@ void thread_read(void)
 	while(1){
 		cmdqueue.dispatch(15);
 		sm_heartbeat();
+
 	}
 }
 
@@ -468,6 +488,14 @@ int main()
 	switch1_btn.rise(switch1_btn_rise);
 	switch1_btn.enable_irq();
 
+	switchShiChe1.mode(PushPullPullDown);
+	switchShiChe1.rise(switchShiChe1_rise);
+	switchShiChe1.enable_irq();
+
+	switchShiChe2.mode(PushPullPullDown);
+	switchShiChe2.rise(switchShiChe2_rise);
+	switchShiChe2.enable_irq();
+
 	switch2_btn.mode(PushPullPullDown);
 	switch2_btn.rise(switch2_btn_rise);
 	switch2_btn.enable_irq();
@@ -479,7 +507,7 @@ int main()
 	motor->wait_while_active();
 
 	/* Printing to the console. */
-	printf("--> Setting Home.\r\n");
+	//printf("--> Setting Home.\r\n");
 
 	/* Setting the current position to be the home position. */
 	motor->set_home();
