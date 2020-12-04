@@ -93,11 +93,11 @@
 #define L6474_CONF_PARAM_MAX_SPEED_DEVICE_2  (1600)
 
 /// Minimum speed in step/s for device 0 (30 step/s <= Minimum speed < 10 000 step/s)
-#define L6474_CONF_PARAM_MIN_SPEED_DEVICE_0  (800)
+#define L6474_CONF_PARAM_MIN_SPEED_DEVICE_0  (200)
 /// Minimum speed in step/s for device 1 (30 step/s <= Minimum speed < 10 000 step/s)
-#define L6474_CONF_PARAM_MIN_SPEED_DEVICE_1  (800)
+#define L6474_CONF_PARAM_MIN_SPEED_DEVICE_1  (200)
 /// Minimum speed in step/s for device 2 (30 step/s <= Minimum speed < 10 000 step/s)
-#define L6474_CONF_PARAM_MIN_SPEED_DEVICE_2  (800)
+#define L6474_CONF_PARAM_MIN_SPEED_DEVICE_2  (200)
 
 
 /************************ Phase Current Control *******************************/

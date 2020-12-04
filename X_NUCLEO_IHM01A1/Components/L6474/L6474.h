@@ -724,11 +724,14 @@ public:
     		istouchlocked = true;
     }
     void startengine();
-    void get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5,
-    		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5);
 
-    void set_cust(uint32_t wait1, uint32_t wait2, uint32_t wait3, uint32_t wait4,uint32_t wait5,
-        		uint32_t freq1, uint32_t freq2, uint32_t freq3, uint32_t freq4,uint32_t freq5);
+
+    void set_cust(uint32_t wait1, uint32_t wait2, uint32_t wait3, uint32_t wait4,uint32_t wait5,uint32_t  wait6,uint32_t  wait7,
+        		uint32_t freq1, uint32_t freq2, uint32_t freq3, uint32_t freq4,uint32_t freq5, uint32_t  freq6,uint32_t  freq7);
+
+    void get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5, uint32_t * wait6,uint32_t * wait7,
+    		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5, uint32_t * freq6,uint32_t * freq7);
+
 
 protected:
 
@@ -1036,7 +1039,7 @@ protected:
 
 
 private:
-#define CUSTEPNUM 5
+#define CUSTEPNUM 7
     int cusFreqs[CUSTEPNUM] ; //= {200,400,600,800,1000};
     int cusWaits[CUSTEPNUM] ; //= {10,20,30,40,50};
 

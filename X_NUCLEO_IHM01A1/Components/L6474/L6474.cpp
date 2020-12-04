@@ -143,13 +143,17 @@ status_t L6474::L6474_Init(void *init)
   cusFreqs[0]=300;
   cusFreqs[1]=500;
   cusFreqs[2]=800;
-  cusFreqs[3]=1200;
-  cusFreqs[4]=1200;
+  cusFreqs[3]=800;
+  cusFreqs[4]=800;
+  cusFreqs[5]=500;
+  cusFreqs[6]=300;
   cusWaits[0] = 10;
   cusWaits[1] = 10;
-  cusWaits[2] = 10;
-  cusWaits[3] = 10;
-  cusWaits[4] = 10;
+  cusWaits[2] = 500;
+  cusWaits[3] = 300;
+  cusWaits[4] = 33;
+  cusWaits[5] = 10;
+  cusWaits[6] = 10;
 
   return COMPONENT_OK;
 }
@@ -269,13 +273,7 @@ void L6474::L6474_GoMark(void)
     L6474_GoTo(mark);  
 }
 
-void L6474::stopengine()
-{
-	L6474_SetDirection(FORWARD);
-	device_prm.motionState = CUSTOMMODE2;
-	L6474_CmdEnable();
-	L6474_ApplySpeed(STOPFREQ);
-}
+
 
 void L6474::startengine()
 {
@@ -289,6 +287,27 @@ void L6474::startengine()
 	L6474_CmdEnable();
 	L6474_ApplySpeed(cusFreqs[0]);
 }
+
+void L6474::stopengine()
+{
+	//device_prm.commandExecuted = MOVE_CMD;
+
+	/* Direction setup */
+	L6474_SetDirection(BACKWARD);
+
+	/* Motor activation */
+	device_prm.motionState = CUSTOMMODE1;
+	L6474_CmdEnable();
+	L6474_ApplySpeed(cusFreqs[0]);
+}
+
+//void L6474::stopengine()
+//{
+//	L6474_SetDirection(FORWARD);
+//	device_prm.motionState = CUSTOMMODE2;
+//	L6474_CmdEnable();
+//	L6474_ApplySpeed(STOPFREQ);
+//}
 
 /**********************************************************
  * @brief  Requests the motor to move to the specified position 
@@ -1269,34 +1288,42 @@ void L6474::L6474_StartMovement(void)
   L6474_ApplySpeed(device_prm.minSpeed);
 }
 
-void L6474::get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5,
-		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5)
+void L6474::get_cust(uint32_t * wait1, uint32_t *wait2, uint32_t * wait3, uint32_t * wait4,uint32_t * wait5, uint32_t * wait6,uint32_t * wait7,
+		uint32_t * freq1, uint32_t *freq2, uint32_t * freq3, uint32_t * freq4,uint32_t * freq5, uint32_t * freq6,uint32_t * freq7)
 {
 	*wait1 = cusWaits[0];
 	*wait2 = cusWaits[1];
 	*wait3 = cusWaits[2];
 	*wait4 = cusWaits[3];
 	*wait5 = cusWaits[4];
+	*wait6 = cusWaits[5];
+	*wait7 = cusWaits[6];
 	*freq1 = cusFreqs[0];
 	*freq2 = cusFreqs[1];
 	*freq3 = cusFreqs[2];
 	*freq4 = cusFreqs[3];
 	*freq5 = cusFreqs[4];
+	*freq6 = cusFreqs[5];
+	*freq7 = cusFreqs[6];
 }
 
-void L6474::set_cust(uint32_t wait1, uint32_t wait2, uint32_t wait3, uint32_t wait4,uint32_t wait5,
-    		uint32_t freq1, uint32_t freq2, uint32_t freq3, uint32_t freq4,uint32_t freq5)
+void L6474::set_cust(uint32_t wait1, uint32_t wait2, uint32_t wait3, uint32_t wait4,uint32_t wait5,uint32_t wait6,uint32_t wait7,
+    		uint32_t freq1, uint32_t freq2, uint32_t freq3, uint32_t freq4,uint32_t freq5, uint32_t freq6,uint32_t freq7)
 {
 	cusWaits[0] = wait1;
 	cusWaits[1] = wait2;
 	cusWaits[2] = wait3;
 	cusWaits[3] = wait4;
 	cusWaits[4] = wait5;
+	cusWaits[5] = wait6;
+	cusWaits[6] = wait7;
 	cusFreqs[0] = freq1;
 	cusFreqs[1] = freq2;
 	cusFreqs[2] = freq3;
 	cusFreqs[3] = freq4;
 	cusFreqs[4] = freq5;
+	cusFreqs[5] = freq6;
+	cusFreqs[6] = freq7;
 }
 
 /**********************************************************

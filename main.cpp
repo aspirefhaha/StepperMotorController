@@ -10,11 +10,13 @@
 
 #include "serialproto/stepmotor/mavlink.h"
 
+#define DEFAULT_SPEED	300
+
 /* Initialization parameters. */
 L6474_init_t init = {
     400,                              /* Acceleration rate in pps^2. Range: (0..+inf). */
     400,                              /* Deceleration rate in pps^2. Range: (0..+inf). */
-    400,                             /* Maximum speed in pps. Range: (30..10000]. */
+	DEFAULT_SPEED,                   /* Maximum speed in pps. Range: (30..10000]. */
     10,                              /* Minimum speed in pps. Range: [30..10000). */
     906.25f,                              /* Torque regulation current in mA. Range: 31.25mA to 4000mA. */
 	L6474_OCD_TH_6000mA,               /* Overcurrent threshold (OCD_TH register). */
@@ -84,6 +86,7 @@ void attime() {
      ++mytickercount;
 }
 
+uint32_t lastCmd = SMCMD_IDLE;
 uint16_t dirstatus = 0;
 uint8_t runstatus = 3;
 
@@ -267,8 +270,13 @@ void sm_postcust()
 	uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
 	mavlink_custstep_t packet_in ;
 
-	motor->get_cust(&packet_in.wait1,&packet_in.wait2,&packet_in.wait3,&packet_in.wait4,&packet_in.wait5,
-			&packet_in.step1,&packet_in.step2,&packet_in.step3,&packet_in.step4,&packet_in.step5);
+	motor->get_cust(
+			&packet_in.wait1,&packet_in.wait2,
+			&packet_in.wait3,&packet_in.wait4,&packet_in.wait5,
+			&packet_in.wait6,&packet_in.wait7,
+			&packet_in.step1,&packet_in.step2,&packet_in.step3,
+			&packet_in.step4,&packet_in.step5,
+			&packet_in.step6,&packet_in.step7);
 	mavlink_msg_custstep_encode(1, 1, &msg, &packet_in);
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buffer, &msg);
 	pc.write((const unsigned char *)buffer,len,NULL);
@@ -301,6 +309,14 @@ void sm_step(StepperMotor::direction_t dir,unsigned int st)
 	motor->move(dir,st);
 	cmdqueue.call(sm_poststatus);
 }
+
+void sm_freqstep(StepperMotor::direction_t dir,unsigned int st,unsigned int maxspeed)
+{
+	motor->set_max_speed(maxspeed);
+	motor->move(dir,st);
+	cmdqueue.call(sm_poststatus);
+}
+
 unsigned char isReboot = 1;
 void sm_postconfig()
 {
@@ -340,6 +356,7 @@ void sm_heartbeat()
 	packet_in.dynamic = OpAmp.read()*3.3;
 	packet_in.speed = motor->get_speed();
 	packet_in.runstatus = motor->get_device_state();
+	packet_in.lastcmd = lastCmd;
 	runstatus = packet_in.runstatus;
 	if(runstatus==3){
 		fwd_Led = 1;
@@ -531,13 +548,15 @@ int main()
 			case MAVLINK_MSG_ID_CUSTSTEP:{
 				mavlink_custstep_t custstep;
 				mavlink_msg_custstep_decode(&message,&custstep);
-				motor->set_cust(custstep.wait1,custstep.wait2,custstep.wait3,custstep.wait4,custstep.wait5,
-								custstep.step1,custstep.step2,custstep.step3,custstep.step4,custstep.step5);
+				motor->set_cust(custstep.wait1,custstep.wait2,custstep.wait3,custstep.wait4,custstep.wait5,custstep.wait6,custstep.wait7,
+								custstep.step1,custstep.step2,custstep.step3,custstep.step4,custstep.step5,custstep.step6,custstep.step7);
+				cmdqueue.call(sm_postcust);
 				break;
 			}
 			case MAVLINK_MSG_ID_RUNCMD:{
 					mavlink_runcmd_t runcmd;
 					mavlink_msg_runcmd_decode(&message,&runcmd);
+					lastCmd = runcmd.cmd;
 					switch(runcmd.cmd){
 					case SMCMD_STOPENGINE:
 					{
@@ -555,8 +574,10 @@ int main()
 						printf("Recv Get Config Cmd\r\n");
 						break;
 					case SMCMD_MOVEFWD:
-						if(!uplock && !downlock)
+						if(!uplock && !downlock){
+							cmdqueue.call(sm_setmaxspeed,runcmd.freq);
 							cmdqueue.call(callback(sm_mvfwd));
+						}
 						printf("Recv Move Forward Cmd\r\n");
 						break;
 					case SMCMD_SOFTSTOP:
@@ -564,8 +585,10 @@ int main()
 						printf("Recv SoftStop Cmd\r\n");
 						break;
 					case SMCMD_MOVEBWD:
-						if(!uplock && !downlock)
+						if(!uplock && !downlock){
+							cmdqueue.call(sm_setmaxspeed,runcmd.freq);
 							cmdqueue.call(callback(sm_mvbwd));
+						}
 						printf("Recv Move Backward Cmd\r\n");
 						break;
 					case SMCMD_HARDSTOP:
@@ -590,8 +613,23 @@ int main()
 						unsigned int mstep = 0;
 						dir = runcmd.dir == 0? StepperMotor::BWD:StepperMotor::FWD;
 						mstep = abs(runcmd.distance);
-						if(!uplock && !downlock)
+						if(!uplock && !downlock){
+							cmdqueue.call(sm_setmaxspeed,runcmd.freq);
 							cmdqueue.call(sm_step,dir,mstep);
+						}
+						printf("Recv MoveStep  Cmd dir %d step %d \r\n",dir,mstep);
+						break;
+					}
+					case SMCMD_STEPFREQDIRMOVE:
+					{
+						StepperMotor::direction_t dir;
+						unsigned int mstep = 0;
+						unsigned int maxspeed = abs(runcmd.freq);
+						dir = runcmd.dir == 0? StepperMotor::BWD:StepperMotor::FWD;
+						mstep = abs(runcmd.distance);
+						if(!uplock && !downlock){
+							cmdqueue.call(sm_freqstep,dir,mstep,maxspeed);
+						}
 						printf("Recv MoveStep  Cmd dir %d step %d \r\n",dir,mstep);
 						break;
 					}
